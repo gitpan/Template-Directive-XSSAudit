@@ -3,7 +3,6 @@ use Test::More;
 use Template::Directive::XSSAudit;
 use Template;
 use List::Util qw(sum);
-            use Data::Dumper;
 
 my $TT2 = Template->new({
     FACTORY => 'Template::Directive::XSSAudit'
@@ -28,7 +27,7 @@ my @tests = (
             $TT2->process(\$input,{},\my $out) || die $TT2->error();
 
             is( scalar @RESPONSES, 1, "$t - num responses is correct");
-            is( $RESPONSES[0][0], 'user.email', "$t - variable name in response is correct");
+            is( $RESPONSES[0][0]->{variable_name}, 'user.email', "$t - variable name in response is correct");
         },
     },
     {
@@ -43,7 +42,52 @@ my @tests = (
             $TT2->process(\$input,{},\my $out) || die $TT2->error();
 
             is( scalar @RESPONSES, 1, "$t - num responses is correct");
-            is( $RESPONSES[0][0], 'user.email', "$t - variable name in response is correct");
+            is( $RESPONSES[0][0]->{variable_name}, 'user.email', "$t - variable name in response is correct");
+        },
+    },
+    {
+        count => 2,
+        code  => sub {
+            my $t = "one variable - after a literal";
+
+            my $input = "[% 'Mr.' _ user.email %]";
+
+            @RESPONSES = ();
+
+            $TT2->process(\$input,{},\my $out) || die $TT2->error();
+
+            is( scalar @RESPONSES, 1, "$t - num responses is correct");
+            is( $RESPONSES[0][0]->{variable_name}, 'user.email', "$t - variable name in response is correct");
+        },
+    },
+    {
+        count => 2,
+        code  => sub {
+            my $t = "one variable - before a literal";
+
+            my $input = "[% user.email _ 'number 2' %]";
+
+            @RESPONSES = ();
+
+            $TT2->process(\$input,{},\my $out) || die $TT2->error();
+
+            is( scalar @RESPONSES, 1, "$t - num responses is correct");
+            is( $RESPONSES[0][0]->{variable_name}, 'user.email', "$t - variable name in response is correct");
+        },
+    },
+    {
+        count => 2,
+        code  => sub {
+            my $t = "one variable - between literals";
+
+            my $input = "[% 'number 1' _ user.email _ 'number 2' %]";
+
+            @RESPONSES = ();
+
+            $TT2->process(\$input,{},\my $out) || die $TT2->error();
+
+            is( scalar @RESPONSES, 1, "$t - num responses is correct");
+            is( $RESPONSES[0][0]->{variable_name}, 'user.email', "$t - variable name in response is correct");
         },
     },
     {
@@ -58,8 +102,8 @@ my @tests = (
             $TT2->process(\$input,{},\my $out) || die $TT2->error();
 
             is( scalar @RESPONSES, 2, "$t - num responses is correct");
-            is( $RESPONSES[0][0], 'user.lname', "$t - variable name in failure num 1 is correct");
-            is( $RESPONSES[1][0], 'user.email', "$t - variable name in failure num 2 is correct");
+            is( $RESPONSES[0][0]->{variable_name}, 'user.lname', "$t - variable name in failure num 1 is correct");
+            is( $RESPONSES[1][0]->{variable_name}, 'user.email', "$t - variable name in failure num 2 is correct");
         },
     },
 

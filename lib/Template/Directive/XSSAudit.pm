@@ -2,27 +2,30 @@ package Template::Directive::XSSAudit;
 use strict;
 use warnings;
 use base qw/ Template::Directive /;
-use Carp;
 
 BEGIN {
     use vars qw ($VERSION);
-    $VERSION = '0.05';
+    $VERSION = '1.00';
 }
 
 our $DEFAULT_ERROR_HANDLER = sub {
-    my($variable, $filters_applied, $filters_required,$context) = @_;
 
-    $context = $context ? "-- $context" : "";
-    local $Carp::CarpLevel = 1;
-    if( @$filters_applied ) {
-        my $applied = join ', ', @$filters_applied;
-        my $required = join ', ', @$filters_required;
-        carp("UNKNOWN_FILTERS $context -- $variable -- applied filters"
-             ."[ $applied ] not in configured safe list [ $required ]");
-    }
-    else {
-        carp("NO_FILTERS      $context -- $variable");
-    }
+    my $context = shift || {};
+
+    my $var_name     = $context->{variable_name};
+    my $filters      = $context->{filtered_by};
+    my $file         = $context->{file_name} || '';
+    my $line_no      = $context->{file_line} || '';
+    my $problem_type = @$filters ? "SAFE_FILTERS_UNUSED" : "NO_FILTERS";
+
+    warn(
+        sprintf("%s\tline:%s\t%s\t%s\t[%s]\n",
+            $file, $line_no,
+            $problem_type, $var_name,
+            join ', ', @$filters
+        )
+    );
+
 };
 
 our @DEFAULT_GOOD_FILTERS = qw( html uri );
@@ -84,7 +87,7 @@ None.
 
 =item Template::Directive::XSSAudit->on_error ( [ coderef ] )
 
-A default implementation is provided which will simply C<carp> any
+A default implementation is provided which will simply C<warn> any
 problems which are found.
 
 If you call this method without a subroutine reference, it will simply
@@ -97,31 +100,39 @@ The callback will be executed in one of two cases:
    were found in the C<good_filter> list.
    
 
-If you provide your own callback, it will be passed
-four parameters.
+If you provide your own callback, it will be passed one parameter 
+which is a hash reference containing the following keys.
 
 =over 4
 
-=item variable name
+=item variable_name
 
 This is a string represending the variable name which was found to be
 incorrectly escaped.
 
-=item filters applied to the variable (array ref of strings)
+=item filtered_by
 
-In the case of variables with no filters, this will be an empty array
-reference.  If there are entries in this list, it means that no filter in the
+This will contain an array reference containing the names of the filters which
+were applied to the variable name.
+
+If there are entries in this list, it means that no filter in the
 good filter list was found to apply to the variable.  See C<good_filter> for
 more information.
 
-=item list of all good filters (array ref of strings)
+In the case of variables with no filters, this will be an empty array
+reference.
 
-This is the exact same information that you can get from the C<good_filters>
-method call.
+=item file_name
 
-=item line number information (not always present)
+The line number in the template file where the problem occurred.
 
-This is the line number and filename where the problem occurred.
+This is parsed out as best as can be done but it may come back as an empty
+string in many cases.  It is a convenience item and should not be relied on
+for any sort of automation.
+
+=item file_line
+
+The line number in the template file where the problem occurred.
 
 This is parsed out as best as can be done but it may come back as an empty
 string in many cases.  It is a convenience item and should not be relied on
@@ -180,10 +191,15 @@ sub good_filters {
 
 sub get {
     my $class = shift;
-    @checking_get = @_;
 
     my $result = $class->SUPER::get(@_);
     $_line_info = _parse_line_info($result);
+    _trigger_warnings();
+
+    if( $_[0] =~ /stash->get/ ) {
+        @checking_get = @_;
+    }
+
     return $result;
 }
 
@@ -216,6 +232,7 @@ sub ident {
     return $result;
 }
 
+# 'block' is notably and intentionally missing
 my @TRIGGER_END_OF_GET_SUBS = qw/
 anon_block textblock text quoted assign
 filenames call set default insert include process if
@@ -226,9 +243,9 @@ for my $method (@TRIGGER_END_OF_GET_SUBS) {
     no strict;
     *$method = sub {
         my $class = shift;
-        _trigger_warnings();
         my $result = &{"Template::Directive::$method"}("Template::Directive",@_);
         $_line_info = _parse_line_info($result);
+        _trigger_warnings();
         return $result;
     }
 }
@@ -255,11 +272,18 @@ sub _trigger_warnings {
         }
 
         if(!@good_filters) {
-            on_error()->(
-                $latest_ident, \@applied_filters,
-                &good_filters(), $_line_info
-            );
+
+            $_line_info =~ /#line\s+(\d+)\s+"(.+?)"/;
+            my($file_line,$file_name) = ($1, $2); 
+            on_error()->({
+                variable_name => $latest_ident,
+                filtered_by   => \@applied_filters,
+                file_name => $file_name,
+                file_line => $file_line,
+            });
         }
+        $_line_info      = '';
+        $latest_ident    = '';
         @applied_filters = ();
         @checking_get    = ();
     }

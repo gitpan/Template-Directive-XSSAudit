@@ -11,14 +11,20 @@ Module::Build->new(
     create_readme      => 1,
     create_makefile_pl => 'traditional',
     requires           => {
-        'Template::Directive' => 0,
-        'Template'            => 0,
         'Carp'                => 0,
+        'FindBin'             => 0,
+        'Getopt::Long'        => 0,
+        'Pod::Usage'          => 0,
+        'Template'            => 0,
+        'Template::Directive' => 0,
     },
     build_requires => {
         'List::Util'          => 0,
         'Test::More'          => 0,
         'Template'            => 0,
+    },
+    script_files => {
+        'script/ttxsscheck' => 'script/ttxsscheck',
     },
 )->create_build_script;
 

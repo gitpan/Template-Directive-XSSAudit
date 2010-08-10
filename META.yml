@@ -17,7 +17,7 @@ name: Template-Directive-XSSAudit
 provides:
   Template::Directive::XSSAudit:
     file: lib/Template/Directive/XSSAudit.pm
-    version: 1.01
+    version: 1.02
 requires:
   Carp: 0
   FindBin: 0
@@ -26,5 +26,8 @@ requires:
   Template: 0
   Template::Directive: 0
 resources:
+  bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Template-Directive-XSSAudit
+  homepage: http://github.com/captin411/template-directive-xssaudit
   license: http://dev.perl.org/licenses/
-version: 1.01
+  repository: http://github.com/captin411/template-directive-xssaudit
+version: 1.02

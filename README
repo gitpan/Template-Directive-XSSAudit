@@ -20,7 +20,7 @@ SYNOPSIS
       # output on STDOUT... via default on_error handler
       # see the documentation of on_error for explanation of the
       # output format of the default error handler
-      \tline:\tNO_FILTERS\texploitable.goodness\t[]
+      #input file   NO_FILTERS  line:1    exploitable.goodness
 
 DESCRIPTION
     This module will help you perform basic lint tests of your template
@@ -73,7 +73,7 @@ METHODS
         problems which are found with the following information (tab
         delimited):
 
-          <file_name> line:<line_no>    <error_type>    [<filters used csv>]
+          <file_name> <error_type> line:<line_no> <filters used csv>
 
         If you call this method without a subroutine reference, it will
         simply return you the current implementation.
